@@ -3,196 +3,99 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ejercicios de Derivadas — Interactivo</title>
+  <title>Calculadora de Derivadas</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
-  <!-- MathJax for pretty math rendering -->
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-  <!-- math.js for symbolic derivative and parsing -->
   <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.min.js"></script>
-  <!-- Plotly for graphs -->
   <script src="https://cdn.plot.ly/plotly-2.24.2.min.js"></script>
   <style>
-    header{display:flex;align-items:center;justify-content:space-between}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-    pre{background:#f7f7f7;padding:.5rem;border-radius:6px;overflow:auto}
     @media(max-width:900px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Derivadas Interactivas</h1>
-    <small>HTML único — listo para GitHub Pages</small>
-  </header>
-
-  <section>
-    <p>Escribe una función en notación de <code>math.js</code> (ej.: <code>sin(x)/x</code>, <code>x^3+2*x</code>, <code>exp(x)</code>).</p>
-
-    <label>Función: <input id="fn" value="x^3 + 2*x^2 - 5*x + sin(x)" style="width:60%"></label>
-    <label>Variable: <input id="var" value="x" style="width:80px"></label>
-    <label>Punto para límite/derivada numérica: <input id="point" value="1" style="width:80px"></label>
-    <br>
-    <button id="calc">Calcular derivada</button>
-    <button id="reset">Ejemplo</button>
-  </section>
-
+  <h1>Calculadora de Derivadas</h1>
+  <p>Ingresa tu función y obtén la derivada simbólica, el cálculo por límites (forma corta) y la gráfica.</p>
+  <label>Función: <input id="fn" value="x^3 + 2*x^2 - 5*x + sin(x)" style="width:60%"></label>
+  <label>Variable: <input id="var" value="x" style="width:80px"></label>
+  <label>Punto: <input id="point" value="1" style="width:80px"></label>
+  <br>
+  <button id="calc">Calcular</button>
+  <button id="reset">Limpiar</button>
   <hr>
-
   <div class="grid">
     <div>
-      <h3>Resultado simbólico</h3>
+      <h3>Derivada simbólica</h3>
       <div id="deriv-latex">—</div>
-      <h4>Simplificación</h4>
+      <h4>Simplificada</h4>
       <div id="simpl-latex">—</div>
-      <h4>Derivada evaluada (numérica)</h4>
+      <h4>Evaluada en el punto</h4>
       <div id="eval-num">—</div>
-
-      <h4>Tabla: cociente incrementa (limite forma corta)</h4>
+      <h4>Límite (forma corta)</h4>
       <div id="limit-table"></div>
     </div>
-
     <div>
-      <h3>Gráfica: función y derivada</h3>
+      <h3>Gráfica</h3>
       <div id="plot" style="height:420px;"></div>
     </div>
   </div>
-
-  <hr>
-  <section>
-    <h3>Explicación rápida</h3>
-    <ul>
-      <li>Usamos <code>math.js</code> para calcular la derivada simbólica (<code>math.derivative</code>), simplificarla y convertirla a LaTeX.</li>
-      <li>La "forma corta" de límite muestra la tabla del cociente de diferencia para varios <code>h</code> que se hacen pequeños; está pensado para comprobar la convergencia numérica sin desarrollar todo el límite manualmente.</li>
-      <li>La gráfica traza la función original y su derivada en un rango alrededor del punto seleccionado.</li>
-    </ul>
-  </section>
-
   <script>
-    // Helper: convierte expresión math.js a LaTeX segura para MathJax
     function toTex(expr){
-      try{
-        const node = math.parse(expr);
-        return node.toTex({parenthesis: 'keep', implicit: 'show'});
-      }catch(e){
-        return null;
-      }
+      try{ return math.parse(expr).toTex({parenthesis:'keep', implicit:'show'}); }catch{return null;}
     }
-
-    function renderLatex(containerId, tex){
-      const el = document.getElementById(containerId);
-      if(!tex){ el.innerHTML = '<pre>Error al parsear.</pre>'; return; }
-      el.innerHTML = `\\(${tex}\\)`;
-      MathJax.typesetPromise([el]).catch(console.error);
+    function renderLatex(id, tex){
+      const el = document.getElementById(id);
+      el.innerHTML = tex ? `\\(${tex}\\)` : 'Error';
+      MathJax.typesetPromise([el]);
     }
-
     function showTable(rows){
-      const div = document.getElementById('limit-table');
       let html = '<table><tr><th>h</th><th>(f(x+h)-f(x))/h</th></tr>';
-      for(const r of rows){ html += `<tr><td>${r.h}</td><td>${r.val}</td></tr>` }
-      html += '</table>';
-      div.innerHTML = html;
+      rows.forEach(r=> html += `<tr><td>${r.h}</td><td>${r.val}</td></tr>`);
+      html += '</table>'; document.getElementById('limit-table').innerHTML = html;
     }
-
-    function numericLimitDifferenceQuotient(fnNode, variable, x0){
-      // build a compiled function for speed
+    function numericLimit(fnNode, variable, x0){
       const f = math.compile(fnNode.toString());
-      const hs = [1e-1,1e-2,1e-3,1e-4,1e-5,1e-6];
-      const rows = [];
-      for(const h of hs){
-        const vph = f.evaluate({[variable]: x0 + h});
-        const v0 = f.evaluate({[variable]: x0});
-        const dq = (vph - v0)/h;
-        rows.push({h, val: Number(dq.toPrecision(12))});
-      }
-      return rows;
+      return [1e-1,1e-2,1e-3,1e-4,1e-5,1e-6].map(h=>({
+        h, val: Number(((f.evaluate({[variable]:x0+h})-f.evaluate({[variable]:x0}))/h).toPrecision(12))
+      }));
     }
-
-    function plotFunctionAndDerivative(fnExpr, derivExpr, variable){
-      const traceFn = {x:[], y:[], name: 'f(x)', mode:'lines'};
-      const traceDer = {x:[], y:[], name: "f'(x)", mode:'lines'};
-      // choose range
+    function plotFn(fnExpr, derivExpr, variable){
+      const traceFn = {x:[], y:[], name:'f(x)', mode:'lines'};
+      const traceDer = {x:[], y:[], name:"f'(x)", mode:'lines'};
       const x0 = Number(document.getElementById('point').value) || 0;
-      const range = 5;
-      const xmin = x0 - range, xmax = x0 + range;
-      const N = 400;
-      const step = (xmax - xmin)/N;
-      const f = math.compile(fnExpr);
-      const d = math.compile(derivExpr);
+      const xmin = x0-5, xmax = x0+5, N=400, step=(xmax-xmin)/N;
+      const f = math.compile(fnExpr), d = math.compile(derivExpr);
       for(let i=0;i<=N;i++){
-        const xv = xmin + i*step;
-        try{
-          const yv = f.evaluate({[variable]: xv});
-          const dv = d.evaluate({[variable]: xv});
-          traceFn.x.push(xv); traceFn.y.push(yv);
-          traceDer.x.push(xv); traceDer.y.push(dv);
-        }catch(e){
-          // push NaN to keep alignment
-          traceFn.x.push(xv); traceFn.y.push(NaN);
-          traceDer.x.push(xv); traceDer.y.push(NaN);
-        }
+        const xv = xmin+i*step;
+        traceFn.x.push(xv); traceFn.y.push(f.evaluate({[variable]:xv}));
+        traceDer.x.push(xv); traceDer.y.push(d.evaluate({[variable]:xv}));
       }
-      const layout = {margin:{t:30},legend:{orientation:'h',x:0.1,y:1.1}};
-      Plotly.newPlot('plot',[traceFn, traceDer], layout, {responsive:true});
+      Plotly.newPlot('plot',[traceFn, traceDer], {legend:{orientation:'h'}});
     }
-
-    document.getElementById('calc').addEventListener('click', ()=>{
-      const expr = document.getElementById('fn').value.trim();
-      const variable = document.getElementById('var').value.trim() || 'x';
-      const point = Number(document.getElementById('point').value) || 0;
-      if(!expr){ alert('Escribe una función.'); return; }
-
-      // parse and compute derivative symbolically
-      let node, derivNode, simplified;
+    document.getElementById('calc').onclick=()=>{
+      const expr=document.getElementById('fn').value.trim();
+      const variable=document.getElementById('var').value.trim();
+      const point=Number(document.getElementById('point').value);
       try{
-        node = math.parse(expr);
-        derivNode = math.derivative(node, variable);
-        simplified = math.simplify(derivNode);
-      }catch(e){
-        document.getElementById('deriv-latex').innerHTML = '<pre>Error al parsear o derivar.</pre>';
-        return;
-      }
-
-      // Render LaTeX
-      const texOrig = toTex(expr);
-      const texDer = derivNode ? derivNode.toTex({parenthesis:'keep',implicit:'show'}) : null;
-      const texSimp = simplified ? simplified.toTex({parenthesis:'keep',implicit:'show'}) : null;
-      renderLatex('deriv-latex', `\displaystyle ${texDer}`);
-      renderLatex('simpl-latex', `\displaystyle ${texSimp}`);
-
-      // Evaluate numeric derivative at point
-      try{
-        const comp = simplified.compile ? simplified.compile() : math.compile(simplified.toString());
-        const valAt = comp.evaluate({[variable]: point});
-        document.getElementById('eval-num').innerText = `f'(${point}) = ${Number(valAt.toPrecision(12))}`;
-      }catch(e){
-        document.getElementById('eval-num').innerText = 'No se pudo evaluar numéricamente en ese punto.';
-      }
-
-      // Table of difference quotients (forma corta de límite)
-      const rows = numericLimitDifferenceQuotient(node, variable, point);
-      showTable(rows);
-
-      // Plot
-      plotFunctionAndDerivative(expr, simplified.toString(), variable);
-    });
-
-    document.getElementById('reset').addEventListener('click', ()=>{
-      document.getElementById('fn').value = 'x^3 + 2*x^2 - 5*x + sin(x)';
-      document.getElementById('var').value = 'x';
-      document.getElementById('point').value = '1';
-      document.getElementById('deriv-latex').innerHTML = '—';
-      document.getElementById('simpl-latex').innerHTML = '—';
-      document.getElementById('eval-num').innerText = '—';
-      document.getElementById('limit-table').innerHTML = '';
-      document.getElementById('plot').innerHTML = '';
-    });
-
-    // run once to display default
-    document.getElementById('calc').click();
+        const node=math.parse(expr);
+        const deriv=math.derivative(node, variable);
+        const simp=math.simplify(deriv);
+        renderLatex('deriv-latex', deriv.toTex({parenthesis:'keep',implicit:'show'}));
+        renderLatex('simpl-latex', simp.toTex({parenthesis:'keep',implicit:'show'}));
+        document.getElementById('eval-num').innerText = `f'(${point}) = ${Number(simp.evaluate({[variable]:point}).toPrecision(12))}`;
+        showTable(numericLimit(node, variable, point));
+        plotFn(expr, simp.toString(), variable);
+      }catch{alert('Error en la función');}
+    }
+    document.getElementById('reset').onclick=()=>{
+      document.getElementById('fn').value='';
+      document.getElementById('deriv-latex').innerHTML='—';
+      document.getElementById('simpl-latex').innerHTML='—';
+      document.getElementById('eval-num').innerText='—';
+      document.getElementById('limit-table').innerHTML='';
+      document.getElementById('plot').innerHTML='';
+    }
   </script>
-
-  <footer>
-    <small>Hecho para GitHub Pages — guarda este archivo como <code>index.html</code> en tu repo y actívalo en Pages.</small>
-  </footer>
 </body>
 </html>
