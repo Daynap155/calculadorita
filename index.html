@@ -3,99 +3,325 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Calculadora de Derivadas</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+  <title>Calculadora de Derivadas — Paso a paso</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.min.js"></script>
   <script src="https://cdn.plot.ly/plotly-2.24.2.min.js"></script>
   <style>
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#7c3aed;--glass:rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{background:linear-gradient(180deg,#071123 0%, #071829 60%);color:#e6eef6;padding:28px}
+    .container{max-width:1100px;margin:0 auto}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#06b6d4);display:flex;align-items:center;justify-content:center;font-weight:700}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:4px 0 0;color:var(--muted)}
+
+    .grid{display:grid;grid-template-columns:1fr 420px;gap:18px;margin-top:18px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr}}
+
+    .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 24px rgba(2,6,23,0.6);}
+    label{display:block;font-weight:600;margin-bottom:6px}
+    input[type=text], select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));color:inherit}
+    .row{display:flex;gap:10px;align-items:center}
+    button.primary{background:var(--accent);color:white;border:0;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 12px;border-radius:10px;color:var(--muted);cursor:pointer}
+    .small{font-size:13px;color:var(--muted)}
+
+    .result-block{margin-top:12px}
+    .latex-box{background:var(--glass);padding:12px;border-radius:8px;min-height:42px}
+    .steps{margin-top:10px;max-height:360px;overflow:auto;padding-right:6px}
+    .step{border-left:3px solid rgba(255,255,255,0.04);padding:10px;margin-bottom:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border-radius:8px}
+    .step h4{margin:0 0 6px 0;font-size:14px}
+    .muted{color:var(--muted)}
+
+    #plot{height:320px;border-radius:8px;background:transparent}
+    table{width:100%;border-collapse:collapse}
+    table th, table td{padding:8px;border-bottom:1px dashed rgba(255,255,255,0.03);text-align:left}
+
+    footer{color:var(--muted);font-size:13px;margin-top:18px;text-align:center}
+
+    .examples{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,0.02);cursor:pointer}
   </style>
 </head>
 <body>
-  <h1>Calculadora de Derivadas</h1>
-  <p>Ingresa tu función y obtén la derivada simbólica, el cálculo por límites (forma corta) y la gráfica.</p>
-  <label>Función: <input id="fn" value="x^3 + 2*x^2 - 5*x + sin(x)" style="width:60%"></label>
-  <label>Variable: <input id="var" value="x" style="width:80px"></label>
-  <label>Punto: <input id="point" value="1" style="width:80px"></label>
-  <br>
-  <button id="calc">Calcular</button>
-  <button id="reset">Limpiar</button>
-  <hr>
-  <div class="grid">
-    <div>
-      <h3>Derivada simbólica</h3>
-      <div id="deriv-latex">—</div>
-      <h4>Simplificada</h4>
-      <div id="simpl-latex">—</div>
-      <h4>Evaluada en el punto</h4>
-      <div id="eval-num">—</div>
-      <h4>Límite (forma corta)</h4>
-      <div id="limit-table"></div>
+  <div class="container">
+    <header>
+      <div class="logo">ƒx</div>
+      <div>
+        <h1>Calculadora de Derivadas — paso a paso</h1>
+        <p class="lead">Derivada simbólica (forma larga), límite (forma corta), explicación paso a paso y gráfica profesional — listo para GitHub Pages.</p>
+      </div>
+    </header>
+
+    <div class="grid">
+      <main class="card">
+        <label>Función (usa <code>x</code> como variable por defecto)</label>
+        <input id="fn" type="text" placeholder="ej: (x^3+2*x)*sin(x)" value="(x^3+2*x^2-5*x)+sin(x)">
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <div style="flex:1">
+            <label>Variable</label>
+            <input id="var" type="text" value="x">
+          </div>
+          <div style="width:140px">
+            <label>Punto (para límites, evaluación)</label>
+            <input id="point" type="text" value="1">
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+          <button class="primary" id="calc">Calcular derivada</button>
+          <button class="ghost" id="clear">Limpiar</button>
+          <div style="margin-left:auto;text-align:right">
+            <div class="small">Ejemplos rápidos</div>
+            <div class="examples" id="examples">
+              <div class="chip">x^3</div>
+              <div class="chip">sin(x)/x</div>
+              <div class="chip">exp(x)*cos(x)</div>
+              <div class="chip">ln(x^2+1)</div>
+              <div class="chip">(x^2+1)^(3)</div>
+            </div>
+          </div>
+        </div>
+
+        <section class="result-block">
+          <h3>Resultado final (simplificado)</h3>
+          <div class="latex-box" id="final-latex">—</div>
+
+          <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+            <button class="ghost" id="toggle-long">Mostrar pasos largos</button>
+            <button class="ghost" id="toggle-short">Mostrar forma corta (límite)</button>
+            <button class="ghost" id="copy-latex">Copiar LaTeX</button>
+          </div>
+
+          <div id="long-steps" class="steps" style="display:none"></div>
+          <div id="short-steps" class="steps" style="display:none"></div>
+        </section>
+
+      </main>
+
+      <aside class="card">
+        <h3 style="margin-top:0">Gráfica & Evaluación</h3>
+        <div id="plot"></div>
+        <div style="margin-top:12px">
+          <div class="small muted">Evaluación numérica en el punto</div>
+          <div class="latex-box" id="eval-point">—</div>
+        </div>
+
+        <div style="margin-top:12px">
+          <div class="small muted">Tabla (forma corta): cociente diferencial</div>
+          <div class="latex-box" id="limit-table">—</div>
+        </div>
+      </aside>
     </div>
-    <div>
-      <h3>Gráfica</h3>
-      <div id="plot" style="height:420px;"></div>
-    </div>
+
+    <footer class="small muted">Guarda este archivo como <code>index.html</code> y súbelo a GitHub Pages. ¿Quieres que genere también PDFs de los pasos o ejercicios aleatorios? Dime y lo agrego.</footer>
   </div>
-  <script>
-    function toTex(expr){
-      try{ return math.parse(expr).toTex({parenthesis:'keep', implicit:'show'}); }catch{return null;}
+
+<script>
+// --- Utilidades y renderizado ---
+function renderMathIn(element){ MathJax.typesetPromise([element]).catch(e=>console.warn(e)); }
+
+function toTexSafe(expr){ try{ return math.parse(expr).toTex({parenthesis:'keep',implicit:'show'});}catch(e){return expr;} }
+
+// --- Derivación con pasos (estrategia basada en strings + recursión) ---
+function deriveStr(node, variable){
+  // node: mathjs Node
+  const type = node.type;
+  if(type==='ConstantNode'){
+    return {str:'0', steps:[{rule:'Constante', before: node.toString(), after:'0', explain:'La derivada de una constante es 0.'}] };
+  }
+  if(type==='SymbolNode'){
+    const val = (node.name===variable) ? '1' : '0';
+    return {str:val, steps:[{rule:'Variable', before: node.toString(), after:val, explain: node.name===variable ? `d(${variable})/d${variable}=1` : 'Constante respecto a la variable.'}] };
+  }
+  if(type==='OperatorNode'){
+    const op = node.op; const args = node.args;
+    if(op==='+'||op==='-'){
+      const left = deriveStr(args[0], variable); const right = deriveStr(args[1], variable);
+      const combined = `(${left.str}) ${op} (${right.str})`;
+      const steps = [...left.steps, ...right.steps, {rule:'Suma/Reasta', before: node.toString(), after: combined, explain:'d(u±v)=u\'±v\''}];
+      return {str:combined, steps};
     }
-    function renderLatex(id, tex){
-      const el = document.getElementById(id);
-      el.innerHTML = tex ? `\\(${tex}\\)` : 'Error';
-      MathJax.typesetPromise([el]);
+    if(op==='*'){
+      const u = args[0], v = args[1];
+      const du = deriveStr(u, variable); const dv = deriveStr(v, variable);
+      const uStr = u.toString(), vStr = v.toString();
+      const expr = `((${du.str})*(${vStr})) + ((${uStr})*(${dv.str}))`;
+      const steps = [...du.steps, ...dv.steps, {rule:'Producto', before: node.toString(), after: expr, explain:`d(u\cdot v)=u'v+uv' (regla del producto).`}];
+      return {str:expr, steps};
     }
-    function showTable(rows){
-      let html = '<table><tr><th>h</th><th>(f(x+h)-f(x))/h</th></tr>';
-      rows.forEach(r=> html += `<tr><td>${r.h}</td><td>${r.val}</td></tr>`);
-      html += '</table>'; document.getElementById('limit-table').innerHTML = html;
+    if(op === '/'){
+      const u=args[0], v=args[1];
+      const du = deriveStr(u, variable); const dv = deriveStr(v, variable);
+      const uStr=u.toString(), vStr=v.toString();
+      const expr = `(((${du.str})*(${vStr})) - ((${uStr})*(${dv.str}))) / ((${vStr})^2)`;
+      const steps = [...du.steps, ...dv.steps, {rule:'Cociente', before: node.toString(), after: expr, explain:'d(u/v)=(u\'v-uv\')/v^2 (regla del cociente).'}];
+      return {str:expr, steps};
     }
-    function numericLimit(fnNode, variable, x0){
-      const f = math.compile(fnNode.toString());
-      return [1e-1,1e-2,1e-3,1e-4,1e-5,1e-6].map(h=>({
-        h, val: Number(((f.evaluate({[variable]:x0+h})-f.evaluate({[variable]:x0}))/h).toPrecision(12))
-      }));
-    }
-    function plotFn(fnExpr, derivExpr, variable){
-      const traceFn = {x:[], y:[], name:'f(x)', mode:'lines'};
-      const traceDer = {x:[], y:[], name:"f'(x)", mode:'lines'};
-      const x0 = Number(document.getElementById('point').value) || 0;
-      const xmin = x0-5, xmax = x0+5, N=400, step=(xmax-xmin)/N;
-      const f = math.compile(fnExpr), d = math.compile(derivExpr);
-      for(let i=0;i<=N;i++){
-        const xv = xmin+i*step;
-        traceFn.x.push(xv); traceFn.y.push(f.evaluate({[variable]:xv}));
-        traceDer.x.push(xv); traceDer.y.push(d.evaluate({[variable]:xv}));
+    if(op==='^'){
+      const base = args[0], exponent = args[1];
+      // caso: exponente constante -> regla de la potencia
+      if(exponent.type==='ConstantNode'){
+        const n = exponent.value;
+        const db = deriveStr(base, variable);
+        const baseStr = base.toString();
+        const expr = `(${n})*(${baseStr})^(${n-1})*(${db.str})`;
+        const steps=[...db.steps,{rule:'Potencia', before: node.toString(), after: expr, explain:`d(u^{n})=n u^{n-1} u' (regla de la potencia + cadena).`}];
+        return {str:expr, steps};
       }
-      Plotly.newPlot('plot',[traceFn, traceDer], {legend:{orientation:'h'}});
+      // caso general: usar derivada general y explicar (fallback)
+      const inner = base.toString();
+      const outer = exponent.toString();
+      const dbase = deriveStr(base, variable); const dexp = deriveStr(exponent, variable);
+      // formula general: d(a^b) = a^b * (b' ln(a) + b a'/a)
+      const expr = `(${base.toString()})^(${exponent.toString()}) * ( (${dexp.str})*ln(${base.toString()}) + (${exponent.toString()})*(${dbase.str})/(${base.toString()}) )`;
+      const steps = [...dbase.steps, ...dexp.steps, {rule:'Potencia general', before: node.toString(), after: expr, explain:'Derivada general para base/exponente dependientes (regla combinada con ln y cadena).'}];
+      return {str:expr, steps};
     }
-    document.getElementById('calc').onclick=()=>{
-      const expr=document.getElementById('fn').value.trim();
-      const variable=document.getElementById('var').value.trim();
-      const point=Number(document.getElementById('point').value);
-      try{
-        const node=math.parse(expr);
-        const deriv=math.derivative(node, variable);
-        const simp=math.simplify(deriv);
-        renderLatex('deriv-latex', deriv.toTex({parenthesis:'keep',implicit:'show'}));
-        renderLatex('simpl-latex', simp.toTex({parenthesis:'keep',implicit:'show'}));
-        document.getElementById('eval-num').innerText = `f'(${point}) = ${Number(simp.evaluate({[variable]:point}).toPrecision(12))}`;
-        showTable(numericLimit(node, variable, point));
-        plotFn(expr, simp.toString(), variable);
-      }catch{alert('Error en la función');}
+    // si llega aquí: fallback
+    try{
+      const d = math.derivative(node, variable).toString();
+      return {str:d, steps:[{rule:'Derivada (fallback)', before: node.toString(), after:d, explain:'Se utilizó el motor simbólico para calcular la derivada de esta expresión compuesta.'}] };
+    }catch(e){
+      return {str:'0', steps:[{rule:'Error', before: node.toString(), after:'0', explain:'No se pudo derivar esta estructura.'}] };
     }
-    document.getElementById('reset').onclick=()=>{
-      document.getElementById('fn').value='';
-      document.getElementById('deriv-latex').innerHTML='—';
-      document.getElementById('simpl-latex').innerHTML='—';
-      document.getElementById('eval-num').innerText='—';
-      document.getElementById('limit-table').innerHTML='';
-      document.getElementById('plot').innerHTML='';
+  }
+  if(type==='FunctionNode'){
+    // funciones comunes: sin, cos, tan, exp, log, sqrt
+    const fname = node.fn && node.fn.name ? node.fn.name : (node.name || node.toString().split('(')[0]);
+    const arg = node.args[0];
+    const argStr = arg.toString();
+    const darg = deriveStr(arg, variable);
+    let outer;
+    switch(fname){
+      case 'sin': outer = `cos(${argStr})*(${darg.str})`; break;
+      case 'cos': outer = `(-1)*sin(${argStr})*(${darg.str})`; break;
+      case 'tan': outer = `(1/(cos(${argStr})^2))*(${darg.str})`; break;
+      case 'exp': outer = `exp(${argStr})*(${darg.str})`; break;
+      case 'log': case 'ln': outer = `(${darg.str})/(${argStr})`; break;
+      case 'sqrt': outer = `(1/(2*sqrt(${argStr})))*(${darg.str})`; break;
+      default:
+        // fallback: chain rule form f'(g(x))*g'(x) y mostrar resultado simbólico
+        try{
+          const tmp = math.derivative(node, variable).toString();
+          outer = tmp;
+        }catch(e){ outer = `(${fname}'(${argStr}))*(${darg.str})`; }
     }
-  </script>
+    const steps = [...darg.steps, {rule:'Función: ' + fname, before: node.toString(), after: outer, explain:`Se aplica la regla de la derivada de ${fname} y la regla de la cadena.`}];
+    return {str:outer, steps};
+  }
+  // parenthesis u otros
+  try{
+    const d = math.derivative(node, variable).toString();
+    return {str:d, steps:[{rule:'Derivada (default)', before: node.toString(), after:d, explain:'Se usó el motor simbólico para derivar esta expresión.'}] };
+  }catch(e){
+    return {str:'0', steps:[{rule:'Error', before: node.toString(), after:'0', explain:'No se pudo procesar.'}] };
+  }
+}
+
+// --- Interface & eventos ---
+function computeAll(){
+  const expr = document.getElementById('fn').value.trim();
+  const variable = document.getElementById('var').value.trim() || 'x';
+  const pointRaw = document.getElementById('point').value.trim();
+  const point = Number(pointRaw);
+  if(!expr){ alert('Escribe una función.'); return; }
+
+  let node;
+  try{ node = math.parse(expr); }catch(e){ alert('Error al parsear la función: ' + e); return; }
+
+  // 1) derivada simbólica final (simplificada)
+  let derivSym;
+  try{ derivSym = math.simplify(math.derivative(node, variable)); }
+  catch(e){ derivSym = null; }
+  const finalTex = derivSym ? `\\displaystyle ${derivSym.toTex({parenthesis:'keep',implicit:'show'})}` : 'No se pudo obtener la derivada simbólica.';
+  document.getElementById('final-latex').innerHTML = finalTex; renderMathIn(document.getElementById('final-latex'));
+
+  // 2) pasos largos: construir con deriveStr
+  const long = deriveStr(node, variable);
+  const longStepsEl = document.getElementById('long-steps'); longStepsEl.innerHTML = '';
+  long.steps.forEach((s, idx)=>{
+    const wrapper = document.createElement('div'); wrapper.className='step';
+    const h = document.createElement('h4'); h.innerText = `${idx+1}. ${s.rule}`; wrapper.appendChild(h);
+    const before = document.createElement('div'); before.className='small muted'; before.innerHTML = 'Antes: <span style="font-weight:600">' + toTexSafe(s.before) + '</span>'; wrapper.appendChild(before);
+    const after = document.createElement('div'); after.style.marginTop='6px'; after.innerHTML = 'Después: <div class="latex-box">' + toTexSafe(s.after) + '</div>'; wrapper.appendChild(after);
+    const expl = document.createElement('div'); expl.className='small muted'; expl.style.marginTop='6px'; expl.innerText = s.explain || '';
+    wrapper.appendChild(expl);
+    longStepsEl.appendChild(wrapper);
+    // render math in the last appended latex-box
+    const boxes = wrapper.querySelectorAll('.latex-box'); if(boxes.length) renderMathIn(boxes[0]);
+  });
+
+  // 3) forma corta: tabla de límites (num)
+  const limitEl = document.getElementById('limit-table');
+  const fCompiled = math.compile(node.toString());
+  const hs = [1e-1,1e-2,1e-3,1e-4,1e-5,1e-6];
+  let tableHtml = '<table><tr><th>h</th><th>(f(x+h)-f(x))/h</th></tr>';
+  let approx = null;
+  try{
+    for(const h of hs){
+      const vph = fCompiled.evaluate({[variable]: point + h});
+      const v0 = fCompiled.evaluate({[variable]: point});
+      const dq = (vph - v0)/h;
+      tableHtml += `<tr><td>${h}</td><td>${Number(dq.toPrecision(12))}</td></tr>`;
+      approx = Number(dq.toPrecision(12));
+    }
+  }catch(e){ tableHtml += '<tr><td colspan="2">No se pudo evaluar en el punto.</td></tr>' }
+  tableHtml += '</table>';
+  limitEl.innerHTML = tableHtml;
+
+  // 4) mostrar evaluación en el punto (valor de la derivada)
+  const evalEl = document.getElementById('eval-point');
+  try{
+    const val = derivSym ? Number(derivSym.evaluate({[variable]: point}).toPrecision(12)) : (approx === null ? '—' : approx);
+    evalEl.innerHTML = `\\(f'(${point}) = ${val}\\)`; renderMathIn(evalEl);
+  }catch(e){ evalEl.innerHTML = 'No se pudo evaluar.' }
+
+  // 5) gráfica (función y derivada)
+  try{
+    const derivExpr = derivSym ? derivSym.toString() : math.derivative(node, variable).toString();
+    plotFunction(node.toString(), derivExpr, variable, point);
+  }catch(e){ console.warn('Error al graficar', e); }
+}
+
+function plotFunction(fnExpr, derivExpr, variable, x0){
+  const f = math.compile(fnExpr); const d = math.compile(derivExpr);
+  const range = 6; const xmin = (isNaN(x0) ? -range : x0 - range/2); const xmax = (isNaN(x0) ? range : x0 + range/2);
+  const N = 300; const step = (xmax - xmin)/N;
+  const xs = []; const ys = []; const yds = [];
+  for(let i=0;i<=N;i++){
+    const xv = xmin + i*step; xs.push(xv);
+    try{ ys.push(f.evaluate({[variable]: xv})); }catch(e){ ys.push(NaN); }
+    try{ yds.push(d.evaluate({[variable]: xv})); }catch(e){ yds.push(NaN); }
+  }
+  const trace1 = {x: xs, y: ys, mode:'lines', name:'f(x)'};
+  const trace2 = {x: xs, y: yds, mode:'lines', name:"f'(x)"};
+  Plotly.newPlot('plot', [trace1, trace2], {margin:{t:10},legend:{orientation:'h'}});
+}
+
+// --- UI eventos ---
+document.getElementById('calc').addEventListener('click', ()=>{ computeAll(); document.getElementById('long-steps').style.display='block'; document.getElementById('short-steps').style.display='block'; });
+document.getElementById('clear').addEventListener('click', ()=>{ document.getElementById('fn').value=''; document.getElementById('final-latex').innerHTML='—'; document.getElementById('long-steps').innerHTML=''; document.getElementById('limit-table').innerHTML='—'; document.getElementById('plot').innerHTML=''; document.getElementById('eval-point').innerHTML='—'; });
+
+// toggles
+const toggleLong = document.getElementById('toggle-long'); toggleLong.addEventListener('click', ()=>{ const el=document.getElementById('long-steps'); el.style.display = el.style.display==='none' || el.style.display==='' ? 'block' : 'none'; });
+const toggleShort = document.getElementById('toggle-short'); toggleShort.addEventListener('click', ()=>{ const el=document.getElementById('short-steps'); el.style.display = el.style.display==='none' || el.style.display==='' ? 'block' : 'none'; });
+
+// copy latex
+document.getElementById('copy-latex').addEventListener('click', ()=>{
+  const content = document.getElementById('final-latex').innerText || document.getElementById('final-latex').textContent;
+  navigator.clipboard.writeText(content).then(()=>{ alert('LaTeX copiado al portapapeles'); }, ()=>{ alert('No se pudo copiar'); });
+});
+
+// examples
+document.querySelectorAll('.chip').forEach(c=>c.addEventListener('click', ()=>{ document.getElementById('fn').value=c.innerText; }));
+
+// Inicial
+computeAll();
+</script>
 </body>
 </html>
